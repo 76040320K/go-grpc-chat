@@ -1,0 +1,17 @@
+{
+    "name": "go-grpc",
+    "dockerFile": "Dockerfile",
+    "appPort": 3041,
+    "extensions": [
+        "ms-vscode.go",
+        "davidanson.vscode-markdownlint",
+        "shardulm94.trailing-spaces",
+        "IBM.output-colorizer"
+    ],
+    "settings": {
+        "editor.tabSize": 2,
+        "go.useLanguageServer": true,
+        "terminal.integrated.shell.linux": "/bin/bash"
+    },
+    "postCreateCommand": "go mod download",
+}
