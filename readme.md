@@ -1,4 +1,4 @@
-GO-GRPC BOILERPLATE
+## GO-GRPC CHAT SERVER
 
 ## compile .proto file to go file
     ```
