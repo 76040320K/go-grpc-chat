@@ -1,44 +1,21 @@
 package main
 
 import (
-	"context"
-	"go-grpc/data"
-	"go-grpc/grpc_application"
+	"go-grpc-chat/chatServer"
+	"go-grpc-chat/protoDir"
+	"go-grpc-chat/redisDb"
 	"log"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"google.golang.org/grpc"
 )
 
 var (
-	port string = "3041"
+	port string = "3051"
 )
-
-type grpcServerStruct struct {
-	grpc_application.AppServer
-}
-
-func (s *grpcServerStruct) GetData(ctx context.Context, req *grpc_application.DataRequest) (*grpc_application.DataResponse, error) {
-	idx := req.Idx
-	var responseMessage *grpc_application.DataSet
-
-	for _, d := range data.DataSet {
-		if d.Idx == idx {
-			responseMessage = d
-			break
-		}
-	}
-
-	return &grpc_application.DataResponse{
-		DataObject: responseMessage,
-	}, nil
-}
-
-func (s *grpcServerStruct) ListData(ctx context.Context, req *grpc_application.DataListRequest) (*grpc_application.DataListResponse, error) {
-	return &grpc_application.DataListResponse{
-		DataObejctList: data.DataSet,
-	}, nil
-}
 
 func main() {
 	listening, err := net.Listen("tcp", ":" + port)
@@ -46,11 +23,26 @@ func main() {
 		log.Panicf("Failed to listen: %v", err)
 	}
 
-	grpcServer := grpc.NewServer()
-	grpc_application.RegisterAppServer(grpcServer, &grpcServerStruct{})
+	redisDb.RedisClient()
+	defer redisDb.RdsCli.Close()
 
+	grpcServer := grpc.NewServer()
+	protoDir.RegisterServicesServer(grpcServer, &chatServer.ChatServer{})
 	log.Printf("gRPC server started on %s port", port)
+
 	if err = grpcServer.Serve(listening); err != nil {
 		log.Panicf("Failed to serve: %v", err)
 	}
+
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGQUIT)
+	go func() {
+		sig := <-signalCh
+		switch sig {
+		case syscall.SIGTERM:
+			grpcServer.GracefulStop()
+		case syscall.SIGQUIT:
+			grpcServer.GracefulStop()
+		}
+	}()
 }
